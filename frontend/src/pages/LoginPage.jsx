@@ -28,8 +28,6 @@ export default function LoginPage() {
       // 로그인 성공 시 토큰을 받아 sessionStorage에 저장하여 홈 페이지로 이동할 수 있게 함
       sessionStorage.setItem("userToken", token);
 
-      console.log("로그인 결과", res.data);
-
       navigate("/");
     } catch (error) {
       if (error.response && error.response.status === 401) {

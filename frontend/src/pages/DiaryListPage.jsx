@@ -7,7 +7,7 @@ import axios from "axios";
 export default function DiaryListPage() {
   const [nickname, setNickname] = useState("");
   const navigate = useNavigate();
-  const [diary, setDiary] = useState("");
+  const [diaries, setDiaries] = useState([]);
 
   useEffect(() => {
     const fetchNickname = async () => {
@@ -17,9 +17,8 @@ export default function DiaryListPage() {
           // 토큰을 보내는 표준적인 방식(Authorization라는 HTTP 표준 헤더에 Bearer {token} 이라는 형태로 내가 로그인해서 받은 JWT 토큰을 담아서 보냄)
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (res.data.success) {
-          setNickname(res.data.nickname);
-        }
+
+        setNickname(res.data.nickname);
       } catch (e) {
         // 로그인 사용자가 아니거나(익명 사용자거나), 서버 요청이 실패하면
         const anonymousNickname = localStorage.getItem("anonymousNickname");
@@ -31,25 +30,31 @@ export default function DiaryListPage() {
         }
       }
     };
-    fetchNickname();
 
     const fetchDiaryContent = async () => {
+      const token = sessionStorage.getItem("userToken");
+      if (!token) {
+        const anonymousDiaries = localStorage.getItem("anonymousDiaries");
+        if (anonymousDiaries) {
+          setDiaries(JSON.parse(anonymousDiaries));
+        } else {
+          setDiaries(null);
+        }
+        return;
+      }
+
       try {
-        const token = sessionStorage.getItem("userToken");
         const res = await axios.get("/api/diaryinfo", {
           headers: { Authorization: `Bearer ${token}` },
         });
-
-        if (res.data.success) {
-          setDiary(res.data.contents);
-          console.log(res.data.contents);
-        }
+        setDiaries(res.data.contents);
       } catch (e) {
         console.error(e);
-        console.log(token);
-        console.log(e.response);
+        setDiaries(null);
       }
     };
+
+    fetchNickname();
     fetchDiaryContent();
   }, []);
 
@@ -71,10 +76,14 @@ export default function DiaryListPage() {
       </div>
 
       <div>
-        {diary && diary.length > 0 ? (
+        {diaries && diaries.length > 0 ? (
           <ul>
-            {diary.map((item, index) => (
-              <li key={index}>{item}</li>
+            {diaries.map((item) => (
+              <li key={item.id}>
+                <h4>{item.title}</h4>
+                <p>{item.content}...</p>
+                <small>{item.created_at}</small>
+              </li>
             ))}
           </ul>
         ) : (
