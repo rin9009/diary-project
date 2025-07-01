@@ -5,7 +5,7 @@ from flask_sqlalchemy import SQLAlchemy
 import os # 환경 변수를 가져온다 환경 변수는 보안 정보(비밀번호, API 키 등)를 코드에 직접 쓰지 않기 위해 사용한다
 from datetime import timedelta
 
-app = Flask(__name__, static_folder="../frontend/dist", static_url_path="/")
+app = Flask(__name__, static_folder="static", static_url_path="/static")
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 # MySQL 연동 설정
@@ -20,6 +20,7 @@ db = SQLAlchemy(app)
 jwt = JWTManager(app)
 
 # 모델 정의
+# 사용자 테이블
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -30,6 +31,7 @@ class User(db.Model):
 
     diaries = db.relationship('Diary', backref='user', lazy=True)
 
+# 다이어리 테이블
 class Diary(db.Model):
     __tablename__ = 'diaries'
     id = db.Column(db.Integer, primary_key=True)
@@ -44,6 +46,13 @@ class Diary(db.Model):
 with app.app_context():
     db.create_all()
 
+# uploads 폴더에 있는 파일에 접근하기 위해 따로 라우트를 만들어줘야 한다
+# 일단 개발 중이라 이렇게 했고 나중에 static 폴더 안으로 넣을 생각
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory('uploads', filename)
+
+# id와 password가 맞는지 확인 후 맞으면 토큰 발급
 @app.route("/api/login", methods=["POST"])
 def login():
     user_data = request.get_json()
@@ -58,6 +67,7 @@ def login():
     else:
         return jsonify({"success": False, "message": "로그인 실패"}), 401
     
+# 사용자 닉네임 출력을 위해 사용자 정보 가져오기
 @app.route("/api/userinfo", methods=["GET"])
 @jwt_required() # 토큰 없으면 아예 API를 막음
 def userinfo():
@@ -70,6 +80,7 @@ def userinfo():
     
     return jsonify({"success": True, "nickname": user.nickname})
 
+# 전체 일기 정보 가져오기
 @app.route("/api/diaryinfo", methods = ["GET"])
 @jwt_required()
 def diaryinfo():
@@ -84,6 +95,8 @@ def diaryinfo():
                 'title': d.title,
                 'content': d.content[:100],
                 'created_at': d.created_at.strftime('%Y-%m-%d'),
+                'weather': d.weather,
+                'photo_path': d.photo_path,
             }
             for d in diaries
         ]
@@ -91,6 +104,26 @@ def diaryinfo():
     else:
         return jsonify({"success": False, "message": "일기가 없습니다."}), 404
 
+# 해당 id의 일기 정보 가져오기
+@app.route("/api/diary/<int:diary_id>", methods=["GET"])
+@jwt_required()
+def get_diary(diary_id):
+    user_id = get_jwt_identity()
+    user = User.query.filter_by(user_id=user_id).first()
+    diary = Diary.query.filter_by(id=diary_id, user_id=user.id).first()
+
+    if diary:
+        return jsonify({
+            "success": True,
+            "id": diary.id,
+            "title": diary.title,
+            "content": diary.content,
+            "created_at": diary.created_at.strftime('%Y-%m-%d'),
+            "weather": diary.weather,
+            "photo_path": diary.photo_path,
+        })
+    else:
+        return jsonify({"success": False, "message": "일기를 찾을 수 없습니다."}), 404
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')

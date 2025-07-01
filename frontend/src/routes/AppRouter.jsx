@@ -6,6 +6,7 @@ import DiaryListPage from "../pages/DiaryListPage";
 import DiaryWritePage from "../pages/DiaryWritePage";
 import SignupPage from "../pages/SignupPage";
 import AnonymousPage from "../pages/AnonymousPage";
+import DiaryReadPage from "../pages/DiaryReadPage";
 import FindAccountPage from "../pages/FindAccountPage";
 import PrivateRoute from "../components/PrivateRoute";
 
@@ -30,6 +31,14 @@ export default function AppRouter() {
           element={
             <PrivateRoute>
               <DiaryWritePage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/diary/read/:id" // 동적 파라미터
+          element={
+            <PrivateRoute>
+              <DiaryReadPage />
             </PrivateRoute>
           }
         />

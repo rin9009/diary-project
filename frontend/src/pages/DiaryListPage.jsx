@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { getDiaries } from "../utils/storage";
 
 export default function DiaryListPage() {
   const [nickname, setNickname] = useState("");
@@ -34,9 +35,9 @@ export default function DiaryListPage() {
     const fetchDiaryContent = async () => {
       const token = sessionStorage.getItem("userToken");
       if (!token) {
-        const anonymousDiaries = localStorage.getItem("anonymousDiaries");
+        const anonymousDiaries = getDiaries();
         if (anonymousDiaries) {
-          setDiaries(JSON.parse(anonymousDiaries));
+          setDiaries(anonymousDiaries);
         } else {
           setDiaries(null);
         }
@@ -48,6 +49,7 @@ export default function DiaryListPage() {
           headers: { Authorization: `Bearer ${token}` },
         });
         setDiaries(res.data.contents);
+        console.log(res.data.contents);
       } catch (e) {
         console.error(e);
         setDiaries(null);
@@ -79,11 +81,13 @@ export default function DiaryListPage() {
         {diaries && diaries.length > 0 ? (
           <ul>
             {diaries.map((item) => (
-              <li key={item.id}>
-                <h4>{item.title}</h4>
-                <p>{item.content}...</p>
-                <small>{item.created_at}</small>
-              </li>
+              <a href={`/diary/read/${item.id}`} key={item.id}>
+                <li>
+                  <h4>{item.title}</h4>
+                  <p>{item.content}...</p>
+                  <small>{item.created_at}</small>
+                </li>
+              </a>
             ))}
           </ul>
         ) : (
