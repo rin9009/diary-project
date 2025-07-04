@@ -1,6 +1,6 @@
 // LoginPage.jsx(로그인/익명(선택) 페이지)
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { useEffect, useState } from "react";
 
@@ -67,8 +67,8 @@ export default function LoginPage() {
         <button type="submit">로그인</button>
       </form>
       <div>
-        <a href="/find-account">아이디 • 비밀번호 찾기</a>
-        <a href="/signup">회원가입</a>
+        <Link to={"/find-account"}>아이디 • 비밀번호 찾기</Link>
+        <Link to={"/signup"}>회원가입</Link>
       </div>
       <br />
       <hr />

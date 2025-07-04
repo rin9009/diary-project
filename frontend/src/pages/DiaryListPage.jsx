@@ -1,7 +1,7 @@
 // DiaryListPage.jsx(일기장 목록 페이지 - 홈 페이지)
 
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { getDiaries } from "../utils/storage";
 
@@ -81,13 +81,13 @@ export default function DiaryListPage() {
         {diaries && diaries.length > 0 ? (
           <ul>
             {diaries.map((item) => (
-              <a href={`/diary/read/${item.id}`} key={item.id}>
-                <li>
+              <li key={item.id}>
+                <Link to={`/diary/read/${item.id}`}>
                   <h4>{item.title}</h4>
                   <p>{item.content}...</p>
                   <small>{item.created_at}</small>
-                </li>
-              </a>
+                </Link>
+              </li>
             ))}
           </ul>
         ) : (

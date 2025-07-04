@@ -1,9 +1,12 @@
+# app.py
+
 from flask import Flask, send_from_directory, jsonify, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_sqlalchemy import SQLAlchemy
 import os # 환경 변수를 가져온다 환경 변수는 보안 정보(비밀번호, API 키 등)를 코드에 직접 쓰지 않기 위해 사용한다
 from datetime import timedelta
+import json
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -36,11 +39,11 @@ class Diary(db.Model):
     __tablename__ = 'diaries'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    title = db.Column(db.String(100))
-    content = db.Column(db.Text)
+    title = db.Column(db.String(100), nullable=False)
+    content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now()) # 저장할 때의 시간
-    weather = db.Column(db.String(100))  # 오늘의 날씨(저장할 때의 날씨)
-    photo_path = db.Column(db.String(200))  # 파일명 또는 경로
+    weather = db.Column(db.String(100), nullable=False)  # 오늘의 날씨(저장할 때의 날씨)
+    photo_paths = db.Column(db.Text, nullable=True)  # 파일명 또는 경로
     
 
 with app.app_context():
@@ -95,8 +98,6 @@ def diaryinfo():
                 'title': d.title,
                 'content': d.content[:100],
                 'created_at': d.created_at.strftime('%Y-%m-%d'),
-                'weather': d.weather,
-                'photo_path': d.photo_path,
             }
             for d in diaries
         ]
@@ -112,6 +113,12 @@ def get_diary(diary_id):
     user = User.query.filter_by(user_id=user_id).first()
     diary = Diary.query.filter_by(id=diary_id, user_id=user.id).first()
 
+    # 배열 형태의 사진 경로를 가져오는데 사진 경로가 있으면 해당 사진의 경로를 가져오고 없음면 빈 배열 가져온다.
+    try:
+        photo_paths = json.loads(diary.photo_paths) if diary.photo_paths else []
+    except json.JSONDecodeError:
+        photo_paths = []
+
     if diary:
         return jsonify({
             "success": True,
@@ -120,7 +127,7 @@ def get_diary(diary_id):
             "content": diary.content,
             "created_at": diary.created_at.strftime('%Y-%m-%d'),
             "weather": diary.weather,
-            "photo_path": diary.photo_path,
+            "photo_paths": photo_paths,
         })
     else:
         return jsonify({"success": False, "message": "일기를 찾을 수 없습니다."}), 404

@@ -17,7 +17,7 @@ export default function DiaryReadPage() {
         });
 
         setDiary(res.data);
-        // console.log(res.data);
+        console.log(res.data);
       } catch (e) {
         console.error(e);
       }
@@ -38,11 +38,21 @@ export default function DiaryReadPage() {
               <h5>{diary.weather}</h5>
             </div>
             <div>
-              <img
-                src={`http://localhost:5000/${diary.photo_path}`}
-                alt="일기 사진"
-                width="300"
-              />
+              {diary.photo_paths && diary.photo_paths.length > 0 ? (
+                diary.photo_paths.map((path, index) => (
+                  <img
+                    key={index}
+                    src={`http://localhost:5000/${path}`}
+                    alt="일기 사진"
+                    style={{ width: "300px", marginRight: "10px" }}
+                  />
+                ))
+              ) : (
+                <div>
+                  <button>+</button>
+                  <h3>+버튼을 눌러 사진을 추가할 수 있습니다</h3>
+                </div>
+              )}
             </div>
           </div>
           <article>
