@@ -19,6 +19,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config["JWT_SECRET_KEY"] = "super-secret-key"  # 실제 배포에선 안전하게 관리!
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
 
+
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
 
@@ -26,7 +27,7 @@ jwt = JWTManager(app)
 # 사용자 테이블
 class User(db.Model):
     __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True) # 기본키 + 자동 증가
     user_id = db.Column(db.String(50), unique=True, nullable=False)
     password = db.Column(db.String(100), nullable=False)
     nickname = db.Column(db.String(50), nullable=False)
@@ -37,7 +38,7 @@ class User(db.Model):
 # 다이어리 테이블
 class Diary(db.Model):
     __tablename__ = 'diaries'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True) # 기본키 + 자동 증가
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     title = db.Column(db.String(100), nullable=False)
     content = db.Column(db.Text, nullable=False)
@@ -73,7 +74,7 @@ def login():
 # 사용자 닉네임 출력을 위해 사용자 정보 가져오기
 @app.route("/api/userinfo", methods=["GET"])
 @jwt_required() # 토큰 없으면 아예 API를 막음
-def userinfo():
+def get_userinfo():
     user_id = get_jwt_identity()
 
     user = User.query.filter_by(user_id=user_id).first()
@@ -86,7 +87,7 @@ def userinfo():
 # 전체 일기 정보 가져오기
 @app.route("/api/diaryinfo", methods = ["GET"])
 @jwt_required()
-def diaryinfo():
+def get_diarylist():
     user_id = get_jwt_identity()
     user = User.query.filter_by(user_id=user_id).first()
     diaries = Diary.query.filter_by(user_id=user.id).order_by(Diary.id.desc()).all()
@@ -131,6 +132,46 @@ def get_diary(diary_id):
         })
     else:
         return jsonify({"success": False, "message": "일기를 찾을 수 없습니다."}), 404
+
+
+@app.route("/api/diary/write", methods=["POST"])
+@jwt_required()
+def write_diary():
+    user_id = get_jwt_identity()
+
+    title = request.form.get("title")
+    content = request.form.get("content")
+    created_at = request.form.get("created_at")
+    weather = request.form.get("weather")
+
+    file = request.files.get("file")
+    photo_paths = None
+
+    if file:
+        import time
+
+        # filename = secure_filename(file.filename)
+        ext = os.path.splitext(file.filename)[1]  # 예: .jpg, .png
+        new_filename = f"diary_{user_id}_{int(time.time())}.{ext}"
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], new_filename))
+        photo_paths = f"/uploads/{new_filename}"
+    
+    # DB에 insert
+    new_diary = Diary(
+        user_id=user_id,
+        title=title,
+        content=content,
+        created_at=created_at,
+        weather=weather,
+        photo_paths=json.dumps([photo_paths]) if photo_paths else json.dumps([]),
+    )
+
+    db.session.add(new_diary)
+    db.session.commit()
+
+    return jsonify({"success": True, "message": "일기 등록 성공"})
+
+
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')

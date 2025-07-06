@@ -1,11 +1,27 @@
 // Header.jsx(헤더부분)
 
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 export default function Header() {
   const location = useLocation();
+  const navigate = useNavigate();
 
-  console.log(location.pathname);
+  // 직접 파싱
+  const pathSegments = location.pathname.split("/");
+  let diaryId = null;
+  if (pathSegments[1] === "diary" && pathSegments[2] === "read") {
+    diaryId = pathSegments[3];
+  }
+
+  // console.log(diaryId);
+
+  const handleUpdate = () => {
+    if (diaryId) {
+      navigate(`/diary/update/${diaryId}`);
+    }
+  };
+
+  // console.log(location.pathname);
 
   return (
     <header>
@@ -22,9 +38,7 @@ export default function Header() {
           </div>
         ) : location.pathname.startsWith("/diary/read") ? (
           <div>
-            <button>
-              <Link to={"/diary/update"}>수정</Link>
-            </button>
+            <button onClick={handleUpdate}>수정</button>
             <button>
               <Link to={"/"}>닫기</Link>
             </button>
