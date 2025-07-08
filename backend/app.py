@@ -5,8 +5,9 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_sqlalchemy import SQLAlchemy
 import os # 환경 변수를 가져온다 환경 변수는 보안 정보(비밀번호, API 키 등)를 코드에 직접 쓰지 않기 위해 사용한다
-from datetime import timedelta
+from datetime import timedelta, datetime
 import json
+import time
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -18,6 +19,11 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # JWT 설정
 app.config["JWT_SECRET_KEY"] = "super-secret-key"  # 실제 배포에선 안전하게 관리!
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # app.py가 있는 폴더 경로
+UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 
 db = SQLAlchemy(app)
@@ -138,39 +144,56 @@ def get_diary(diary_id):
 @jwt_required()
 def write_diary():
     user_id = get_jwt_identity()
+    user = User.query.filter_by(user_id=user_id).first()
+
+    if not user:
+        return jsonify({"success": False, "message": "유저를 찾을 수 없습니다."}), 404
 
     title = request.form.get("title")
     content = request.form.get("content")
-    created_at = request.form.get("created_at")
+    created_at_str = request.form.get("created_at")
+    
+    # 날짜 문자열을 datetime 객체로 변환
+    if created_at_str:
+        try:
+            created_at = datetime.strptime(created_at_str, "%Y-%m-%d")
+        except ValueError:
+            created_at = None  # 파싱 실패 시 None 처리
+    else:
+        created_at = None
+
     weather = request.form.get("weather")
 
-    file = request.files.get("file")
-    photo_paths = None
+    files = request.files.getlist("file")
+    photo_paths =[]
 
-    if file:
-        import time
+    upload_folder = app.config['UPLOAD_FOLDER']
+    if not os.path.exists(upload_folder):
+        os.makedirs(upload_folder)
+
+    for file in files:
 
         # filename = secure_filename(file.filename)
         ext = os.path.splitext(file.filename)[1]  # 예: .jpg, .png
-        new_filename = f"diary_{user_id}_{int(time.time())}.{ext}"
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], new_filename))
-        photo_paths = f"/uploads/{new_filename}"
+        millis = int(time.time() * 1000)  # 초 대신 밀리초
+        new_filename = f"diary_{user.id}_{millis}{ext}"
+        file.save(os.path.join(upload_folder, new_filename))
+        photo_paths.append(f"/uploads/{new_filename}")
     
     # DB에 insert
     new_diary = Diary(
-        user_id=user_id,
+        user_id=user.id,
         title=title,
         content=content,
         created_at=created_at,
         weather=weather,
-        photo_paths=json.dumps([photo_paths]) if photo_paths else json.dumps([]),
+        photo_paths=json.dumps(photo_paths) if photo_paths else json.dumps([]),
     )
 
     db.session.add(new_diary)
     db.session.commit()
 
     return jsonify({"success": True, "message": "일기 등록 성공"})
-
 
 
 @app.route('/', defaults={'path': ''})

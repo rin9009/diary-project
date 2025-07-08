@@ -1,9 +1,11 @@
 // DiaryWritePage.jsx(일기장 작성(폼) 페이지)
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { saveDiary } from "../utils/storage";
 import { useNavigate } from "react-router-dom";
 import { fetchWeather, dfs_xy_conv } from "../utils/getWeather";
+import { useSaveHandler } from "../contexts/SaveContext";
+import axios from "axios";
 
 export default function DiaryWritePage() {
   const fileInputRef = useRef(null); // 파일 input DOM을 가리키는 ref
@@ -18,33 +20,38 @@ export default function DiaryWritePage() {
     return kst;
   }); // 오늘 날짜 기본(toISOString -> UTC라 9시간이 밀려, 한국 기준으로 바꿔줌)
   const [dateStr, setDateStr] = useState(todayDate.toISOString().slice(0, 10));
+  const { setSaveHandler } = useSaveHandler();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("content", content);
-    formData.append("created_at", dateStr); // yyyy-mm-dd
-    formData.append("weather", weather);
-    if (selectedFiles) {
-      formData.append("file", selectedFiles);
-    }
-
-    try {
-      const token = sessionStorage.getItem("userToken");
-      const res = await axios.post("/api/diary/write", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
-        },
+  const handleSubmit = useCallback(
+    // 무한 렌더링/상태 업데이트 오류로 useCallback 추가
+    async (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("content", content);
+      formData.append("created_at", dateStr); // yyyy-mm-dd
+      formData.append("weather", weather);
+      selectedFiles.forEach((file) => {
+        formData.append("file", file);
       });
-      console.log(res.data.message);
-      // 페이지 이동 등 처리
-      navigate("/");
-    } catch (err) {
-      console.error(err);
-    }
-  };
+
+      try {
+        const token = sessionStorage.getItem("userToken");
+        const res = await axios.post("/api/diary/write", formData, {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        console.log(res.data.message);
+        // 페이지 이동 등 처리
+        navigate("/");
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    [title, content, dateStr, weather, selectedFiles]
+  );
 
   const handlePlusClick = () => {
     fileInputRef.current.click(); // 버튼 클릭 시 file input 클릭을 강제로 발생
@@ -74,6 +81,7 @@ export default function DiaryWritePage() {
   useEffect(() => {
     const yyyyMMdd = todayDate.toISOString().slice(0, 10).replace(/-/g, ""); // 날짜
     const baseTime = getBaseTime(); // 시간
+    // const baseTime = "1500";
 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -83,6 +91,7 @@ export default function DiaryWritePage() {
           // const nx = 38.0684; // 샘플(강원도 인제)
           // const ny = 128.1707; // 샘플(강원도 인제)
           const { x, y } = dfs_xy_conv(nx, ny);
+          // console.log(dateStr);
           fetchWeather(yyyyMMdd, baseTime, x, y).then(setWeather);
         },
         (error) => {
@@ -112,9 +121,13 @@ export default function DiaryWritePage() {
     return () => clearInterval(timer);
   }, [todayDate]);
 
+  useEffect(() => {
+    setSaveHandler(() => handleSubmit); // 저장 함수 등록
+  }, [handleSubmit]);
+
   return (
     <div>
-      <form action="" method="post" onSubmit={handleSubmit}>
+      <form action="/diary/write" method="post" onSubmit={handleSubmit}>
         <input
           type="text"
           value={title}
@@ -160,12 +173,13 @@ export default function DiaryWritePage() {
           )}
         </div>
         <div>
-          <input
-            type="text"
+          <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="일기"
-          />
+            rows="10"
+            cols="50"
+          ></textarea>
         </div>
       </form>
     </div>

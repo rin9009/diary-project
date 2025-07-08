@@ -67,9 +67,20 @@ export async function fetchWeather(date, time, nx, ny) {
       },
     });
 
+    const data = response.data;
+
     // 응답 파싱 예시
-    const items = response.data.response.body.items.item;
-    console.log(items);
+    const items = data?.response?.body?.items?.item;
+    if (!items || items.length === 0) {
+      console.error("날씨 데이터가 없습니다.");
+      return "";
+    }
+
+    const header = data?.response?.header;
+    if (header?.resultCode !== "00") {
+      console.error("날씨 API 에러:", header?.resultMsg);
+      return "에러";
+    }
 
     const weatherItemPty = items.find((item) => item.category === "PTY"); // 강수 형태
     const weatherItemSky = items.find((item) => item.category === "SKY"); // 하늘 상태

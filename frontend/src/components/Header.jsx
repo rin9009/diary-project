@@ -1,10 +1,16 @@
 // Header.jsx(헤더부분)
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useSaveHandler } from "../contexts/SaveContext";
 
 export default function Header() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { saveHandler } = useSaveHandler(); // 저장 함수 가져오기
+
+  const showSave =
+    location.pathname.startsWith("/diary/write") ||
+    location.pathname.startsWith("/diary/update");
 
   // 직접 파싱
   const pathSegments = location.pathname.split("/");
@@ -43,10 +49,9 @@ export default function Header() {
               <Link to={"/"}>닫기</Link>
             </button>
           </div>
-        ) : location.pathname.startsWith("/diary/update") ||
-          location.pathname.startsWith("/diary/write") ? (
+        ) : showSave ? (
           <div>
-            <button>저장</button>
+            <button onClick={saveHandler}>저장</button>
             <button>
               <Link to={"/"}>닫기</Link>
             </button>
