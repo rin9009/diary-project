@@ -21,6 +21,7 @@ export default function DiaryWritePage() {
   }); // 오늘 날짜 기본(toISOString -> UTC라 9시간이 밀려, 한국 기준으로 바꿔줌)
   const [dateStr, setDateStr] = useState(todayDate.toISOString().slice(0, 10));
   const { setSaveHandler } = useSaveHandler();
+  const [previewURLs, setPreviewURLs] = useState([]);
 
   const handleSubmit = useCallback(
     // 무한 렌더링/상태 업데이트 오류로 useCallback 추가
@@ -44,14 +45,24 @@ export default function DiaryWritePage() {
           },
         });
         console.log(res.data.message);
-        // 페이지 이동 등 처리
-        navigate("/");
+        if (res.data.success) {
+          alert("일기 등록 성공!");
+          // 페이지 이동 등 처리
+          navigate("/");
+        }
       } catch (err) {
         console.error(err);
+        alert("등록 중 오류 발생");
       }
     },
     [title, content, dateStr, weather, selectedFiles]
   );
+
+  const removePhoto = (indexToRemove) => {
+    setSelectedFiles((prevFiles) =>
+      prevFiles.filter((_, index) => index !== indexToRemove)
+    );
+  };
 
   const handlePlusClick = () => {
     fileInputRef.current.click(); // 버튼 클릭 시 file input 클릭을 강제로 발생
@@ -59,7 +70,7 @@ export default function DiaryWritePage() {
 
   const handleChange = (e) => {
     const files = Array.from(e.target.files);
-    setSelectedFiles(files);
+    setSelectedFiles((prevFiles) => [...prevFiles, ...files]);
   };
 
   function getBaseTime() {
@@ -121,13 +132,23 @@ export default function DiaryWritePage() {
     return () => clearInterval(timer);
   }, [todayDate]);
 
+  // URL.createObjectURL() 정리
+  useEffect(() => {
+    const newURLs = selectedFiles.map((file) => URL.createObjectURL(file));
+    setPreviewURLs(newURLs);
+
+    return () => {
+      newURLs.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [selectedFiles]);
+
   useEffect(() => {
     setSaveHandler(() => handleSubmit); // 저장 함수 등록
   }, [handleSubmit]);
 
   return (
     <div>
-      <form action="/diary/write" method="post" onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit}>
         <input
           type="text"
           value={title}
@@ -158,16 +179,28 @@ export default function DiaryWritePage() {
           {selectedFiles.length > 0 && (
             <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
               {selectedFiles.map((file, index) => (
-                <img
-                  key={index}
-                  src={URL.createObjectURL(file)}
-                  alt={`preview-${index}`}
-                  style={{
-                    width: "150px",
-                    height: "150px",
-                    objectFit: "cover",
-                  }}
-                />
+                <div key={index} style={{ position: "relative" }}>
+                  <img
+                    src={previewURLs[index]}
+                    alt={`preview-${index}`}
+                    style={{
+                      width: "150px",
+                      height: "150px",
+                      objectFit: "cover",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(index)}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      right: 0,
+                    }}
+                  >
+                    x
+                  </button>
+                </div>
               ))}
             </div>
           )}

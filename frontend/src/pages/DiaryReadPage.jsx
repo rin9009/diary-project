@@ -44,13 +44,16 @@ export default function DiaryReadPage() {
                     key={index}
                     src={`http://localhost:5000/${path}`}
                     alt="일기 사진"
-                    style={{ width: "300px", marginRight: "10px" }}
+                    style={{
+                      width: "300px",
+                      height: "300px",
+                      marginRight: "10px",
+                    }}
                   />
                 ))
               ) : (
                 <div>
-                  <button>+</button>
-                  <h3>+버튼을 눌러 사진을 추가할 수 있습니다</h3>
+                  <h3>등록한 사진이 없습니다.</h3>
                 </div>
               )}
             </div>

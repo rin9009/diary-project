@@ -51,7 +51,7 @@ export default function LoginPage() {
   return (
     <div>
       <h1>Login</h1>
-      <form action="/login" method="post" onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit}>
         <input
           type="text"
           value={userId}

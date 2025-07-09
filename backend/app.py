@@ -139,7 +139,7 @@ def get_diary(diary_id):
     else:
         return jsonify({"success": False, "message": "일기를 찾을 수 없습니다."}), 404
 
-
+# 일기 작성 후 저장
 @app.route("/api/diary/write", methods=["POST"])
 @jwt_required()
 def write_diary():
@@ -165,9 +165,10 @@ def write_diary():
     weather = request.form.get("weather")
 
     files = request.files.getlist("file")
-    photo_paths =[]
+    photo_paths = []
 
     upload_folder = app.config['UPLOAD_FOLDER']
+    # 해당 경로 없으면 폴더 만들기
     if not os.path.exists(upload_folder):
         os.makedirs(upload_folder)
 
@@ -194,6 +195,74 @@ def write_diary():
     db.session.commit()
 
     return jsonify({"success": True, "message": "일기 등록 성공"})
+
+# 일기 수정 후 저장
+@app.route("/api/diary/update/<int:diary_id>", methods=["POST"])
+@jwt_required()
+def update_diary(diary_id):
+    user_id = get_jwt_identity()
+    user = User.query.filter_by(user_id=user_id).first()
+    # 기존 다이어리 찾기
+    diary = Diary.query.filter_by(id=diary_id, user_id=user.id).first()
+
+    if not user:
+        return jsonify({"success": False, "message": "유저를 찾을 수 없습니다."}), 404    
+    if not diary:
+        return jsonify({"success": False, "message": "일기를 찾을 수 없습니다"}), 404
+
+    
+    title = request.form.get("title")
+    content = request.form.get("content")
+    files = request.files.getlist("file")
+    # 사진이 없으므로 완전 삭제하라는 플래그
+    clear_photos = request.form.get("clearPhotos") == "true"
+    photo_paths = []
+
+
+    # 남겨진 기존 사진 경로 받기
+    existing_paths = request.form.get("existingPaths")
+    existing_paths = json.loads(existing_paths) if existing_paths else []
+    
+
+    # DB에 저장되어 있던 이전 사진 경로 불러오기
+    old_paths = json.loads(diary.photo_paths) if diary.photo_paths else []
+    # 삭제할 사진(old_paths에 있었지만 existing_paths에는 없는 것 → 삭제된 것)
+    deleted_paths = [p for p in old_paths if p not in existing_paths]
+
+    # 업로드 폴더 확인 및 생성
+    upload_folder = app.config['UPLOAD_FOLDER']
+    if not os.path.exists(upload_folder):
+        os.makedirs(upload_folder)
+
+    # 서버에서 삭제할 사진 제거
+    for rel_path in deleted_paths:
+        abs_path = os.path.join(upload_folder, os.path.basename(rel_path))
+        if os.path.exists(abs_path):
+            os.remove(abs_path)
+
+    # 새로 업로드된 파일 저장
+    new_paths = []
+    if files:
+        for file in files:
+            ext = os.path.splitext(file.filename)[1]  # 예: .jpg, .png
+            millis = int(time.time() * 1000)  # 초 대신 밀리초
+            new_filename = f"diary_{user.id}_{millis}{ext}"
+            file.save(os.path.join(upload_folder, new_filename))
+            new_paths.append(f"/uploads/{new_filename}") 
+
+    # 최종 사진 리스트 = 기존 유지 + 새 업로드
+    final_paths = existing_paths + new_paths
+
+    # 필드 값 업데이트
+    diary.title = title
+    diary.content = content
+
+    diary.photo_paths = json.dumps(final_paths)
+    
+    # DB 저장
+    db.session.commit()
+
+    return jsonify({"success": True, "message": "일기 수정 완료"})
 
 
 @app.route('/', defaults={'path': ''})
