@@ -2,6 +2,7 @@
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useSaveHandler } from "../contexts/SaveContext";
+import axios from "axios";
 
 export default function Header() {
   const location = useLocation();
@@ -21,9 +22,17 @@ export default function Header() {
 
   // console.log(diaryId);
 
+  // 일기 수정 페이지로 이동
   const handleUpdate = () => {
     if (diaryId) {
       navigate(`/diary/update/${diaryId}`);
+    }
+  };
+
+  // 일기 삭제 페이지로 이동
+  const handleDelete = () => {
+    if (diaryId) {
+      navigate(`/diary/delete/${diaryId}`);
     }
   };
 
@@ -45,6 +54,7 @@ export default function Header() {
         ) : location.pathname.startsWith("/diary/read") ? (
           <div>
             <button onClick={handleUpdate}>수정</button>
+            <button onClick={handleDelete}>삭제</button>
             <button>
               <Link to={"/"}>닫기</Link>
             </button>

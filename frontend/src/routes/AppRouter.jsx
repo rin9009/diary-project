@@ -9,6 +9,7 @@ import DiaryUpdatePage from "../pages/DiaryUpdatePage";
 import SignupPage from "../pages/SignupPage";
 import AnonymousPage from "../pages/AnonymousPage";
 import DiaryReadPage from "../pages/DiaryReadPage";
+import DiaryDeletePage from "../pages/DiaryDeletePage";
 import FindAccountPage from "../pages/FindAccountPage";
 import PrivateRoute from "../components/PrivateRoute";
 import Header from "../components/Header";
@@ -54,6 +55,14 @@ export default function AppRouter() {
             element={
               <PrivateRoute>
                 <DiaryUpdatePage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/diary/delete/:id"
+            element={
+              <PrivateRoute>
+                <DiaryDeletePage />
               </PrivateRoute>
             }
           />

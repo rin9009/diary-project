@@ -115,6 +115,8 @@ export default function DiaryUpdatePage() {
   const handleChange = (e) => {
     const files = Array.from(e.target.files);
     setSelectedFiles((prevFiles) => [...prevFiles, ...files]); // 기존 사진에 새 파일 추가
+    // 같은 파일 다시 선택 가능하게 input 리셋
+    e.target.value = "";
   };
 
   useEffect(() => {

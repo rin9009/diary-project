@@ -265,6 +265,21 @@ def update_diary(diary_id):
     return jsonify({"success": True, "message": "일기 수정 완료"})
 
 
+@app.route("/api/diary/delete/<int:diary_id>", methods=["DELETE"])
+@jwt_required()
+def delete_diary(diary_id):
+    user_id = get_jwt_identity()
+    user = User.query.filter_by(user_id=user_id).first()
+    diary = Diary.query.filter_by(id=diary_id, user_id=user.id).first()
+    
+    if not diary:
+        return jsonify({"error": "일기를 찾을 수 없습니다."}), 404
+    
+    db.session.delete(diary)
+    db.session.commit()
+    return jsonify({"message": "일기 삭제 성공"}), 200
+
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve_react(path):

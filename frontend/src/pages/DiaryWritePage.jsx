@@ -71,6 +71,8 @@ export default function DiaryWritePage() {
   const handleChange = (e) => {
     const files = Array.from(e.target.files);
     setSelectedFiles((prevFiles) => [...prevFiles, ...files]);
+    // 같은 파일 다시 선택 가능하게 input 리셋
+    e.target.value = "";
   };
 
   function getBaseTime() {
